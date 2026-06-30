@@ -1,7 +1,9 @@
+import os
 import pickle
 import streamlit as st
 import requests
 import pandas as pd
+import gdown
 
 # ==============================
 # OMDb API Key
@@ -9,12 +11,26 @@ import pandas as pd
 API_KEY = "33ce3e04"
 
 
+GOOGLE_DRIVE_LINK = "https://drive.google.com/file/d/1y6pESS5R6mliVNy9u1AbhEtmVkZH-trM/view?usp=sharing"
 
+
+if not os.path.exists("similarity.pkl"):
+    with st.spinner("Downloading recommendation model... Please wait."):
+        gdown.download(
+            url=GOOGLE_DRIVE_LINK,
+            output="similarity.pkl",
+            fuzzy=True
+        )
+
+
+
+@st.cache_data(show_spinner=False)
 def fetch_poster(movie_name):
+
     url = f"http://www.omdbapi.com/?t={movie_name}&apikey={API_KEY}"
 
     try:
-        response = requests.get(url)
+        response = requests.get(url, timeout=3)
         data = response.json()
 
         if data["Response"] == "True" and data["Poster"] != "N/A":
@@ -23,13 +39,12 @@ def fetch_poster(movie_name):
     except:
         pass
 
-
     return "https://via.placeholder.com/300x450?text=No+Poster"
 
 
-
 def recommend(movie):
-    index = movies[movies['title'] == movie].index[0]
+
+    index = movies[movies["title"] == movie].index[0]
 
     distances = sorted(
         list(enumerate(similarity[index])),
@@ -41,6 +56,7 @@ def recommend(movie):
     recommended_movie_posters = []
 
     for i in distances[1:6]:
+
         movie_title = movies.iloc[i[0]].title
 
         recommended_movie_names.append(movie_title)
@@ -67,6 +83,7 @@ if isinstance(movies_data, dict):
 else:
     movies = movies_data
 
+
 movie_list = movies["title"].values
 
 selected_movie = st.selectbox(
@@ -76,7 +93,9 @@ selected_movie = st.selectbox(
 
 
 if st.button("Show Recommendation"):
+
     with st.spinner("Finding similar movies..."):
+
         recommended_movie_names, recommended_movie_posters = recommend(
             selected_movie
         )
@@ -86,11 +105,13 @@ if st.button("Show Recommendation"):
     cols = st.columns(5)
 
     for idx, col in enumerate(cols):
+
         with col:
 
             st.image(
-            recommended_movie_posters[idx],
-            use_column_width=True)
+                recommended_movie_posters[idx],
+                use_column_width=True
+            )
 
             st.markdown(
                 f"""
